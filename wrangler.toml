@@ -1,0 +1,8 @@
+name = "ifworlds-stickers"
+compatibility_date = "2026-01-10"
+
+# 这是一个静态网站项目，使用 Pages 的 assets 功能
+pages_build_output_dir = "dist"
+
+# 不需要 Worker，只需要静态资源托管
+# main 字段留空表示这是纯静态网站

@@ -25,6 +25,39 @@ A simple SPA to store and display stickers.
 - `npm run dev`: Start development server
 - `npm run build`: Build for production
 
+## Cloudflare Pages 部署
+
+### 构建配置
+
+项目已配置好 `wrangler.toml`，Cloudflare Pages 会自动识别：
+
+- **构建命令**: `npm run build`（自动执行）
+- **构建输出目录**: `dist`（在 wrangler.toml 中指定）
+- **Node 版本**: 20（通过 `.node-version` 文件指定）
+
+### 环境变量
+
+无需额外环境变量。
+
+### 配置文件
+
+- `.node-version` - 指定 Node.js 版本
+- `wrangler.toml` - Cloudflare Pages 配置
+
+### 部署说明
+
+1. 连接你的 GitHub 仓库到 Cloudflare Pages
+2. 使用上述构建配置
+3. 每次推送到 main 分支会自动部署
+
+## 功能特性
+
+- ✅ Hash Router SPA（支持静态托管）
+- ✅ 响应式设计（移动端和桌面端自适应）
+- ✅ 点击复制表情到剪贴板
+- ✅ PNG 图片自动添加白色背景（避免黑底问题）
+- ✅ 自动扫描并生成表情包索引（构建时）
+
 ## Original Vite Readme
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
