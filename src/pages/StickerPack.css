@@ -119,6 +119,63 @@
   animation: fadeIn 0.3s;
 }
 
+.error-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.error-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 100%;
+  width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.error-modal h3 {
+  margin: 0;
+  color: #e53e3e;
+}
+
+.error-modal pre {
+  background: #f7fafc;
+  padding: 12px;
+  border-radius: 6px;
+  overflow: auto;
+  font-size: 12px;
+  font-family: monospace;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #2d3748;
+  flex: 1;
+}
+
+.error-modal button {
+  align-self: flex-end;
+  padding: 8px 16px;
+  background: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }

@@ -8,6 +8,7 @@ export default function StickerPackPage() {
   const [pack, setPack] = useState<StickerPack | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -55,16 +56,16 @@ export default function StickerPackPage() {
         URL.revokeObjectURL(url);
         
         // 转换为blob并复制
-        canvas.toBlob(async (newBlob) => {
-          if (newBlob) {
-            await navigator.clipboard.write([
-              new ClipboardItem({
-                'image/png': newBlob
-              })
-            ]);
-            showToast('已复制到剪贴板!');
-          }
-        }, 'image/png');
+        const newBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+        
+        if (newBlob) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'image/png': newBlob
+            })
+          ]);
+          showToast('已复制到剪贴板!');
+        }
       } else {
         // 非PNG直接复制
         await navigator.clipboard.write([
@@ -76,7 +77,8 @@ export default function StickerPackPage() {
       }
     } catch (err) {
       console.error('Failed to copy', err);
-      showToast('复制失败');
+      setError(err instanceof Error ? err : new Error(String(err)));
+      showToast('复制失败，请尝试长按图片保存');
     }
   };
 
@@ -108,6 +110,16 @@ export default function StickerPackPage() {
       </div>
 
       {toast && <div className="toast">{toast}</div>}
+      
+      {error && (
+        <div className="error-modal-overlay" onClick={() => setError(null)}>
+          <div className="error-modal" onClick={e => e.stopPropagation()}>
+            <h3>复制出错</h3>
+            <pre>{error.stack || error.message}</pre>
+            <button onClick={() => setError(null)}>关闭</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
