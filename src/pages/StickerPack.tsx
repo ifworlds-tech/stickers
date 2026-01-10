@@ -26,12 +26,17 @@ export default function StickerPackPage() {
 
   const copyToClipboard = async (filename: string) => {
     if (!pack) return;
+    let step = 'init';
     try {
+      step = 'fetch_image';
       const response = await fetch(`stickers/${pack.path}/${filename}`);
+      
+      step = 'get_blob';
       const blob = await response.blob();
       
       // 如果是PNG，转换为带白色背景的图片以避免黑底问题
       if (blob.type === 'image/png') {
+        step = 'create_img_element';
         const img = new Image();
         const url = URL.createObjectURL(blob);
         
@@ -41,6 +46,7 @@ export default function StickerPackPage() {
           img.src = url;
         });
         
+        step = 'create_canvas';
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
@@ -55,18 +61,23 @@ export default function StickerPackPage() {
         
         URL.revokeObjectURL(url);
         
+        step = 'canvas_to_blob';
         // 转换为blob并复制
         const newBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
         
         if (newBlob) {
+          step = 'write_clipboard_png';
           await navigator.clipboard.write([
             new ClipboardItem({
               'image/png': newBlob
             })
           ]);
           showToast('已复制到剪贴板!');
+        } else {
+          throw new Error('Canvas to Blob returned null');
         }
       } else {
+        step = 'write_clipboard_other';
         // 非PNG直接复制
         await navigator.clipboard.write([
           new ClipboardItem({
@@ -75,9 +86,20 @@ export default function StickerPackPage() {
         ]);
         showToast('已复制到剪贴板!');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to copy', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      
+      const errorDetails = [
+        `Step: ${step}`,
+        `Error: ${err?.name || 'Unknown'}`,
+        `Message: ${err?.message || String(err)}`,
+        `Type: ${err?.constructor?.name || typeof err}`,
+        `Code: ${err?.code || 'N/A'}`,
+        '--- Stack ---',
+        err?.stack || 'No stack trace available'
+      ].join('\n');
+
+      setError(new Error(errorDetails));
       showToast('复制失败，请尝试长按图片保存');
     }
   };
