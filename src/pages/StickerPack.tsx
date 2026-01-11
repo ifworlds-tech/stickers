@@ -8,7 +8,7 @@ export default function StickerPackPage() {
   const [pack, setPack] = useState<StickerPack | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -99,7 +99,7 @@ export default function StickerPackPage() {
         err?.stack || 'No stack trace available'
       ].join('\n');
 
-      setError(new Error(errorDetails));
+      setError(errorDetails);
       showToast('复制失败，请尝试长按图片保存');
     }
   };
@@ -137,7 +137,7 @@ export default function StickerPackPage() {
         <div className="error-modal-overlay" onClick={() => setError(null)}>
           <div className="error-modal" onClick={e => e.stopPropagation()}>
             <h3>复制出错</h3>
-            <pre>{error.stack || error.message}</pre>
+            <pre>{error}</pre>
             <button onClick={() => setError(null)}>关闭</button>
           </div>
         </div>
