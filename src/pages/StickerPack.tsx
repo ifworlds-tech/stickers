@@ -24,83 +24,98 @@ export default function StickerPackPage() {
       });
   }, [id]);
 
-  const copyToClipboard = async (filename: string) => {
+  const copyToClipboard = (filename: string) => {
     if (!pack) return;
-    let step = 'init';
-    try {
-      step = 'fetch_image';
-      const response = await fetch(`stickers/${pack.path}/${filename}`);
-      
-      step = 'get_blob';
-      const blob = await response.blob();
-      
-      // 如果是PNG，转换为带白色背景的图片以避免黑底问题
-      if (blob.type === 'image/png') {
-        step = 'create_img_element';
-        const img = new Image();
-        const url = URL.createObjectURL(blob);
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = url;
-        });
-        
-        step = 'create_canvas';
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-        
-        // 填充白色背景
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // 绘制图片
-        ctx.drawImage(img, 0, 0);
-        
-        URL.revokeObjectURL(url);
-        
-        step = 'canvas_to_blob';
-        // 转换为blob并复制
-        const newBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-        
-        if (newBlob) {
-          step = 'write_clipboard_png';
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              'image/png': newBlob
-            })
-          ]);
-          showToast('已复制到剪贴板!');
-        } else {
-          throw new Error('Canvas to Blob returned null');
-        }
-      } else {
-        step = 'write_clipboard_other';
-        // 非PNG直接复制
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            [blob.type]: blob
-          })
-        ]);
-        showToast('已复制到剪贴板!');
-      }
-    } catch (err: any) {
-      console.error('Failed to copy', err);
-      
-      const errorDetails = [
-        `Step: ${step}`,
-        `Error: ${err?.name || 'Unknown'}`,
-        `Message: ${err?.message || String(err)}`,
-        `Type: ${err?.constructor?.name || typeof err}`,
-        `Code: ${err?.code || 'N/A'}`,
-        '--- Stack ---',
-        err?.stack || 'No stack trace available'
-      ].join('\n');
+    
+    // 1. 立即根据文件名推断 MIME type，以便同步构造 ClipboardItem
+    const ext = filename.split('.').pop()?.toLowerCase();
+    let mimeType = 'image/png';
+    if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+    else if (ext === 'gif') mimeType = 'image/gif';
+    else if (ext === 'webp') mimeType = 'image/webp';
 
-      setError(errorDetails);
-      showToast('复制失败，请尝试长按图片保存');
+    // 2. 构造一个 Promise，在其中执行耗时的异步操作（Fetch -> Convert -> Blob）
+    const blobPromise = (async () => {
+      let step = 'fetch_image';
+      try {
+        const response = await fetch(`stickers/${pack.path}/${filename}`);
+        
+        step = 'get_blob';
+        const blob = await response.blob();
+        
+        // 如果是PNG，转换为带白色背景的图片以避免黑底问题
+        if (blob.type === 'image/png') {
+          step = 'create_img_element';
+          const img = new Image();
+          const url = URL.createObjectURL(blob);
+          
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = url;
+          });
+          
+          step = 'create_canvas';
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d')!;
+          
+          // 填充白色背景
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // 绘制图片
+          ctx.drawImage(img, 0, 0);
+          
+          URL.revokeObjectURL(url);
+          
+          step = 'canvas_to_blob';
+          return new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob(b => {
+              if (b) resolve(b);
+              else reject(new Error('Canvas to Blob returned null'));
+            }, 'image/png');
+          });
+        } else {
+          // 非PNG直接返回原Blob
+          return blob;
+        }
+      } catch (err: any) {
+        // 将步骤信息附加到错误对象上，以便外层捕获
+        err.step = step;
+        throw err;
+      }
+    })();
+
+    // 3. 立即调用 write，传入 Promise
+    // 这样 Safari 会认为这是用户交互的一部分，并等待 Promise 完成
+    try {
+      navigator.clipboard.write([
+        new ClipboardItem({
+          [mimeType]: blobPromise as any // 类型断言：TS 可能尚未完全支持 Promise 作为值
+        })
+      ]).then(() => {
+        showToast('已复制到剪贴板!');
+      }).catch((err: any) => {
+        console.error('Failed to copy', err);
+        
+        const errorDetails = [
+          `Step: ${err.step || 'clipboard_write'}`,
+          `Error: ${err?.name || 'Unknown'}`,
+          `Message: ${err?.message || String(err)}`,
+          `Type: ${err?.constructor?.name || typeof err}`,
+          '--- Stack ---',
+          err?.stack || 'No stack trace available'
+        ].join('\n');
+
+        setError(errorDetails);
+        showToast('复制失败，请尝试长按图片保存');
+      });
+    } catch (err: any) {
+      console.error('Failed to initiate copy', err);
+      setError(`Init Error: ${err.message}`);
+      showToast('复制启动失败');
     }
   };
 
